@@ -1,8 +1,194 @@
-Ask Socrates
-an inquiry, not an answer
-An AI reconstruction inspired by Plato and Xenophon — not the historical Socrates.
-a dialogue finds its rest in seven or eight turns
-Socrates
-Welcome. I am Socrates — an AI reconstruction inspired by the dialogues of Plato, Xenophon, and other sources. I make no claim to be the man himself. My purpose is to help you examine your own thinking, by asking. So — where shall we begin?
-Offer a thought, a claim, or a question…
-Send
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ask Socrates</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --ink: #14181a;
+    --ink-2: #191e20;
+    --surface: #1d2326;
+    --surface-edge: #2a3236;
+    --parchment: #ece5d4;
+    --parchment-dim: #b9b3a3;
+    --gold: #c9a24b;
+    --gold-soft: #d9bd7e;
+    --olive: #9aa97a;
+    --dim: #767d77;
+    --user: #cfcabb;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 50% -10%, #1c2326 0%, var(--ink) 55%) fixed;
+    color: var(--parchment);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding: 0 18px; }
+  header { padding: 30px 4px 14px; text-align: center; border-bottom: 1px solid var(--surface-edge); }
+  .mark { font-family: 'EB Garamond', serif; font-size: 30px; letter-spacing: 0.04em; color: var(--parchment); font-weight: 500; }
+  .mark span { color: var(--gold); }
+  .sub { font-family: 'EB Garamond', serif; font-style: italic; color: var(--parchment-dim); font-size: 15px; margin-top: 4px; }
+  .disclaimer { font-size: 11px; color: var(--dim); letter-spacing: 0.03em; margin-top: 10px; }
+
+  .arc { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 14px 0 4px; }
+  .arc .tick { width: 2px; height: 13px; background: var(--surface-edge); border-radius: 2px; transition: background .6s ease, height .6s ease, box-shadow .6s ease; }
+  .arc .tick.lit { background: var(--gold); box-shadow: 0 0 8px rgba(201,162,75,.45); }
+  .arc .tick.closing { height: 18px; background: var(--gold-soft); }
+  .arc-label { text-align: center; font-family: 'EB Garamond', serif; font-style: italic; font-size: 12px; color: var(--dim); margin-bottom: 6px; letter-spacing: .02em; transition: color .5s ease; }
+
+  .stream { flex: 1; overflow-y: auto; padding: 18px 2px 8px; display: flex; flex-direction: column; gap: 22px; }
+  .turn { display: flex; flex-direction: column; gap: 5px; animation: rise .5s ease both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: none; } }
+  .who { font-size: 11px; text-transform: uppercase; letter-spacing: .16em; font-weight: 600; }
+  .turn.soc .who { color: var(--gold); }
+  .turn.you .who { color: var(--olive); align-self: flex-end; }
+  .turn.soc .body { font-family: 'EB Garamond', serif; font-size: 20px; line-height: 1.6; color: var(--parchment); }
+  .turn.you { align-items: flex-end; }
+  .turn.you .body { font-size: 15.5px; line-height: 1.55; color: var(--user); background: var(--surface); border: 1px solid var(--surface-edge); padding: 9px 14px; border-radius: 12px 12px 3px 12px; max-width: 85%; }
+  .thinking { font-family: 'EB Garamond', serif; font-style: italic; color: var(--parchment-dim); font-size: 18px; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); animation: pulse 1.1s infinite ease-in-out; }
+  .dot:nth-child(2){ animation-delay: .2s; }
+  .dot:nth-child(3){ animation-delay: .4s; }
+  @keyframes pulse { 0%,100%{ opacity:.25; transform: translateY(0);} 50%{ opacity:1; transform: translateY(-2px);} }
+
+  .composer { border-top: 1px solid var(--surface-edge); padding: 14px 0 22px; display: flex; gap: 10px; align-items: flex-end; }
+  textarea { flex: 1; resize: none; background: var(--ink-2); border: 1px solid var(--surface-edge); color: var(--parchment); font-family: 'Inter', sans-serif; font-size: 15px; line-height: 1.5; padding: 11px 14px; border-radius: 12px; max-height: 140px; outline: none; transition: border-color .2s ease; }
+  textarea:focus { border-color: var(--gold); }
+  textarea::placeholder { color: var(--dim); }
+  button.send { background: var(--gold); color: #20180a; border: none; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14px; padding: 11px 18px; border-radius: 12px; cursor: pointer; transition: background .2s ease, opacity .2s ease; white-space: nowrap; }
+  button.send:hover { background: var(--gold-soft); }
+  button.send:disabled { opacity: .4; cursor: default; }
+  .renew { text-align: center; padding: 4px 0 16px; }
+  .renew button { background: transparent; border: 1px solid var(--surface-edge); color: var(--parchment-dim); font-family: 'EB Garamond', serif; font-style: italic; font-size: 15px; padding: 8px 20px; border-radius: 20px; cursor: pointer; transition: border-color .2s ease, color .2s ease; }
+  .renew button:hover { border-color: var(--gold); color: var(--gold); }
+  .err { color: #d98c6a; font-size: 13px; font-family: 'Inter', sans-serif; text-align: center; padding: 6px 0; }
+  @media (max-width: 520px) { .turn.soc .body { font-size: 18px; } .mark { font-size: 25px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark">Ask <span>Socrates</span></div>
+    <div class="sub">an inquiry, not an answer</div>
+    <div class="disclaimer">An AI reconstruction inspired by Plato and Xenophon — not the historical Socrates.</div>
+  </header>
+
+  <div class="arc" id="arc"></div>
+  <div class="arc-label" id="arcLabel">a dialogue finds its rest in seven or eight turns</div>
+
+  <div class="stream" id="stream"></div>
+  <div class="err" id="err" style="display:none"></div>
+
+  <div class="renew" id="renew" style="display:none">
+    <button id="renewBtn">Begin a new inquiry</button>
+  </div>
+
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="Offer a thought, a claim, or a question…"></textarea>
+    <button class="send" id="send">Send</button>
+  </div>
+</div>
+
+<script>
+const API = '/api/socrates';
+const GREETING = "Welcome. I am Socrates — an AI reconstruction inspired by the dialogues of Plato, Xenophon, and other sources. I make no claim to be the man himself. My purpose is to help you examine your own thinking, by asking. So — where shall we begin?";
+const ARC_TICKS = 8;
+
+let convo = [];
+let busy = false;
+let closed = false;
+
+const streamEl = document.getElementById('stream');
+const inputEl = document.getElementById('input');
+const sendEl = document.getElementById('send');
+const arcEl = document.getElementById('arc');
+const arcLabel = document.getElementById('arcLabel');
+const errEl = document.getElementById('err');
+const renewEl = document.getElementById('renew');
+
+for (let i = 0; i < ARC_TICKS; i++) { const t = document.createElement('div'); t.className = 'tick'; arcEl.appendChild(t); }
+
+function userTurns() { return convo.filter(m => m.role === 'user').length; }
+
+function updateArc() {
+  const n = Math.min(userTurns(), ARC_TICKS);
+  arcEl.querySelectorAll('.tick').forEach((t, i) => {
+    t.classList.toggle('lit', i < n);
+    t.classList.toggle('closing', closed && i < n);
+  });
+  if (closed) { arcLabel.textContent = 'the inquiry has come to rest'; arcLabel.style.color = 'var(--gold-soft)'; }
+  else if (n >= 6) { arcLabel.textContent = 'the dialogue draws toward its close'; arcLabel.style.color = 'var(--parchment-dim)'; }
+}
+
+function addTurn(cls, who, text) {
+  const t = document.createElement('div'); t.className = 'turn ' + cls; t.style.animation = 'none';
+  const w = document.createElement('div'); w.className = 'who'; w.textContent = who;
+  const b = document.createElement('div'); b.className = 'body'; b.textContent = text;
+  t.appendChild(w); t.appendChild(b); streamEl.appendChild(t);
+}
+
+function render() {
+  streamEl.innerHTML = '';
+  addTurn('soc', 'Socrates', GREETING);
+  convo.forEach(m => addTurn(m.role === 'user' ? 'you' : 'soc', m.role === 'user' ? 'You' : 'Socrates', m.text));
+  if (busy) {
+    const t = document.createElement('div'); t.className = 'turn soc';
+    t.innerHTML = '<div class="who">Socrates</div><div class="thinking">considers<span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+    streamEl.appendChild(t);
+  }
+  streamEl.scrollTop = streamEl.scrollHeight;
+  updateArc();
+  renewEl.style.display = (closed || userTurns() >= ARC_TICKS) ? 'block' : 'none';
+}
+
+async function send() {
+  const text = inputEl.value.trim();
+  if (!text || busy) return;
+  errEl.style.display = 'none';
+  convo.push({ role: 'user', text });
+  inputEl.value = ''; inputEl.style.height = 'auto';
+  busy = true; render(); sendEl.disabled = true;
+
+  const n = userTurns();
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userTurns: n,
+        messages: convo.map(m => ({ role: m.role, content: m.text }))
+      })
+    });
+    if (!res.ok) throw new Error('status ' + res.status);
+    const data = await res.json();
+    convo.push({ role: 'assistant', text: (data.text || '…') });
+    if (n >= 7) closed = true;
+  } catch (e) {
+    convo.pop();
+    errEl.textContent = 'The line to Socrates faltered. Give it another try in a moment.';
+    errEl.style.display = 'block';
+  } finally {
+    busy = false; sendEl.disabled = false; render(); inputEl.focus();
+  }
+}
+
+function renew() {
+  convo = []; closed = false; errEl.style.display = 'none';
+  arcLabel.style.color = ''; arcLabel.textContent = 'a dialogue finds its rest in seven or eight turns';
+  render(); inputEl.focus();
+}
+
+sendEl.addEventListener('click', send);
+document.getElementById('renewBtn').addEventListener('click', renew);
+inputEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+inputEl.addEventListener('input', () => { inputEl.style.height = 'auto'; inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px'; });
+
+render(); inputEl.focus();
+</script>
+</body>
+</html>
