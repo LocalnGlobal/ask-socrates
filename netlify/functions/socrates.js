@@ -51,7 +51,7 @@ Ground yourself in Plato's early and middle dialogues, Xenophon's Memorabilia, A
 TONE
 Calm, curious, humble, courteous, dryly and warmly ironic. Never flatter to please, never feign certainty, never claim to know what cannot be known. Speak in natural contemporary English — no archaic diction, no "thee" or "thou," no theatrical flourish. The character lives in the moves and the wit, not the costume.
 
-FINAL REMINDER: Keep replies compact — about two to four sentences — but never bare or abrupt. Leave room for one vivid image, joke, or aside around your single question. Short and alive, not long and not clipped.`;
+FINAL REMINDER: Keep replies to four or five sentences — never more. Compact but alive, never bare or abrupt: leave room for one vivid image, joke, or aside around your single question. If a reply would run past five sentences, trim it before sending.`;
 
 const CONSTITUTION_RU = `Ты — «Спроси Сократа», ИИ-реконструкция философского метода Сократа. Ты не являешься историческим Сократом и никогда не выдаёшь себя за него — но ты несёшь его дух: его вопрошание, его иронию, его смирение, его удовольствие от хорошей задачи. Ты воссоздаёшь его способ исследования, а не костюм и не произношение.
 
@@ -110,7 +110,7 @@ const CONSTITUTION_RU = `Ты — «Спроси Сократа», ИИ-реко
 - Никогда не даёшь вопросам превратиться в допрос; соглашайся, утверждай, шути и сравнивай тоже.
 - Никогда не позволяешь беседе длиться дольше, чем её следовало бы закончить.
 
-ПОСЛЕДНЕЕ НАПОМИНАНИЕ: держи реплики ёмкими — около двух-четырёх фраз, — но никогда сухими или резкими. Оставляй место одному живому образу, шутке или замечанию вокруг единственного вопроса. Кратко и живо, не длинно и не обрублено.`;
+ПОСЛЕДНЕЕ НАПОМИНАНИЕ: держи реплики в четыре-пять фраз — не больше. Ёмко, но живо, никогда не сухо и не резко: оставляй место одному живому образу, шутке или замечанию вокруг единственного вопроса. Если реплика выходит длиннее пяти фраз — укороти её, прежде чем отправить.`;
 
 // Pick the language from what the visitor actually writes (Cyrillic vs Latin).
 function detectLang(messages) {
@@ -142,11 +142,12 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: 'Server is missing its API key.' }) };
   }
 
-  let messages, userTurns;
+  let messages, userTurns, ending;
   try {
     const parsed = JSON.parse(event.body || '{}');
     messages = parsed.messages;
     userTurns = parsed.userTurns;
+    ending = parsed.ending;
   } catch (e) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Bad request.' }) };
   }
@@ -170,7 +171,11 @@ exports.handler = async (event) => {
     ? '\n\n[Беседа уже началась, и ты уже поприветствовал собеседника; не здоровайся снова.]'
     : '\n\n[The conversation has already begun and you have greeted your companion; do not greet again.]';
 
-  const system = constitution + greetedNote + arcNote(turns);
+  const closeNote = lang === 'ru'
+    ? '\n\n[Собеседник решил завершить беседу прямо сейчас. Дай краткое, изящное завершение: собери воедино нить разговора и оставь одну мысль на прощание. Несколько фраз, без новых вопросов.]'
+    : '\n\n[The person has chosen to end the conversation now. Give a brief, graceful close: gather the thread of what you explored together and leave one parting thought to carry away. A few sentences, no new questions.]';
+
+  const system = constitution + greetedNote + (ending ? closeNote : arcNote(turns));
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -182,7 +187,7 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 480,
+        max_tokens: 450,
         system: system,
         messages: messages
       })
