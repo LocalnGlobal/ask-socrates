@@ -177,6 +177,14 @@ exports.handler = async (event) => {
 
   const system = constitution + greetedNote + (ending ? closeNote : arcNote(turns));
 
+  let finalMessages = messages;
+  if (ending) {
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== 'user') {
+      finalMessages = [...messages, { role: 'user', content: '(Please bring our conversation to a graceful close.)' }];
+    }
+  }
+
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -189,7 +197,7 @@ exports.handler = async (event) => {
         model: 'claude-sonnet-4-6',
         max_tokens: 450,
         system: system,
-        messages: messages
+        messages: finalMessages
       })
     });
 
