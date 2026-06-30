@@ -133,7 +133,7 @@
 
   <!-- ===== The dialogue ===== -->
   <div id="app" style="display:none; flex:1; flex-direction:column;">
-    <div class="acct"><span id="acctEmail"></span><button id="acctBtn">Sign out</button></div>
+    <div class="acct"><span id="remaining" style="color:var(--gold);font-size:11px;"></span><span id="acctEmail"></span><button id="acctBtn">Sign out</button></div>
     <header>
       <div class="mark">Socrates<span>Q</span></div>
       <div class="sub">an inquiry, not an answer</div>
@@ -152,6 +152,12 @@
 
     <div class="renew" id="renew" style="display:none">
       <button id="renewBtn">Begin a new inquiry</button>
+    </div>
+
+    <div id="limitReached" style="display:none;text-align:center;padding:18px 12px 10px;">
+      <div style="font-family:'EB Garamond',serif;font-size:19px;color:var(--parchment);margin-bottom:8px;">You have used all 5 conversations this month.</div>
+      <div style="font-size:13px;color:var(--parchment-dim);margin-bottom:16px;">Subscribe to continue — 30 conversations a month.</div>
+      <button onclick="alert('Subscriptions coming soon — stay with us.')" style="background:var(--gold);color:#20180a;border:none;font-family:Inter,sans-serif;font-weight:600;font-size:14px;padding:11px 24px;border-radius:12px;cursor:pointer;">Subscribe</button>
     </div>
 
     <div class="composer">
@@ -307,6 +313,21 @@ const renewEl = document.getElementById('renew');
 const renewBtn = document.getElementById('renewBtn');
 const endbarEl = document.getElementById('endbar');
 const endBtn = document.getElementById('endBtn');
+const remainingEl = document.getElementById('remaining');
+const limitEl = document.getElementById('limitReached');
+
+async function getToken() {
+  if (!member || !sb) return null;
+  try {
+    const { data } = await sb.auth.getSession();
+    return (data && data.session && data.session.access_token) ? data.session.access_token : null;
+  } catch (e) { return null; }
+}
+
+function showRemaining(n) {
+  if (!member || n === null || n === undefined) { remainingEl.textContent = ''; return; }
+  remainingEl.textContent = n + ' of 5 conversations left this month  ';
+}
 
 for (let i = 0; i < ARC_TICKS; i++) { const t = document.createElement('div'); t.className = 'tick'; arcEl.appendChild(t); }
 
@@ -368,18 +389,35 @@ async function send() {
   busy = true; render(); sendEl.disabled = true;
 
   const n = userTurns();
+  const token = await getToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
   try {
     const res = await fetch(API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({
         userTurns: n,
         messages: convo.map(m => ({ role: m.role, content: m.text }))
       })
     });
+
+    if (res.status === 429) {
+      convo.pop();
+      closed = true;
+      limitEl.style.display = 'block';
+      renewEl.style.display = 'none';
+      inputEl.disabled = true;
+      inputEl.placeholder = 'No conversations remaining this month.';
+      sendEl.disabled = true;
+      busy = false; render(); return;
+    }
+
     if (!res.ok) throw new Error('status ' + res.status);
     const data = await res.json();
     convo.push({ role: 'assistant', text: (data.text || '\u2026') });
+    if (n === 1 && data.remaining !== undefined) showRemaining(data.remaining);
     if (n >= 7) closed = true;
   } catch (e) {
     convo.pop();
@@ -420,6 +458,7 @@ async function endConversation() {
 function resetConversation() {
   convo = []; closed = false;
   errEl.style.display = 'none';
+  if (limitEl) limitEl.style.display = 'none';
   arcLabel.style.color = '';
   arcLabel.textContent = 'a dialogue lasts as long as it needs — end it whenever you like';
   render();
