@@ -160,6 +160,13 @@
       <button onclick="alert('Subscriptions coming soon — stay with us.')" style="background:var(--gold);color:#20180a;border:none;font-family:Inter,sans-serif;font-weight:600;font-size:14px;padding:11px 24px;border-radius:12px;cursor:pointer;">Subscribe</button>
     </div>
 
+    <div id="forumLink" style="display:none;text-align:center;padding:10px 0 6px;">
+      <a href="https://www.forumofminds.com" target="_blank" rel="noopener"
+         style="font-family:'EB Garamond',serif;font-style:italic;font-size:15px;color:var(--gold);text-decoration:none;letter-spacing:.02em;">
+        Bring your question to the Council&nbsp;→&nbsp;Forum of Minds
+      </a>
+    </div>
+
     <div class="composer">
       <textarea id="input" rows="1" placeholder="Put your question to Socrates…"></textarea>
       <button class="send" id="send">Send</button>
@@ -315,6 +322,7 @@ const endbarEl = document.getElementById('endbar');
 const endBtn = document.getElementById('endBtn');
 const remainingEl = document.getElementById('remaining');
 const limitEl = document.getElementById('limitReached');
+const forumLinkEl = document.getElementById('forumLink');
 
 async function getToken() {
   if (!member || !sb) return null;
@@ -369,8 +377,10 @@ function render() {
     if (taster) localStorage.setItem('sq_tasted', '1');
     renewEl.style.display = 'block';
     renewBtn.textContent = member ? 'Begin a new inquiry' : 'Create an account to continue';
+    if (forumLinkEl) forumLinkEl.style.display = 'block';
   } else {
     renewEl.style.display = 'none';
+    if (forumLinkEl) forumLinkEl.style.display = 'none';
   }
 
   inputEl.disabled = done;
@@ -459,6 +469,7 @@ function resetConversation() {
   convo = []; closed = false;
   errEl.style.display = 'none';
   if (limitEl) limitEl.style.display = 'none';
+  if (forumLinkEl) forumLinkEl.style.display = 'none';
   arcLabel.style.color = '';
   arcLabel.textContent = 'a dialogue lasts as long as it needs — end it whenever you like';
   render();
