@@ -33,7 +33,77 @@
   .wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; padding: 0 18px; }
 
   /* ---- Auth (the threshold) ---- */
-  .authwrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 18px; min-height: 100vh; }
+  .authwrap { position: relative; overflow: hidden; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 18px; min-height: 100vh; }
+  /* Elevate the sign-in content above the digital-hero animation layers */
+  .authwrap > .seal,
+  .authwrap > .authmark,
+  .authwrap > .thresh,
+  .authwrap > .threshsub,
+  .authwrap > .authcard,
+  .authwrap > .authback,
+  .authwrap > .authdisc { position: relative; z-index: 2; }
+
+  /* === Digital hero — animated background layers === */
+  .digital-hero-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+  }
+  .digital-hero-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 3px,
+      rgba(0,0,0,0.10) 3px,
+      rgba(0,0,0,0.10) 4px
+    );
+  }
+  .digital-hero-overlay::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 180px;
+    background: linear-gradient(180deg,
+      transparent 0%,
+      rgba(201,162,75,0.05) 35%,
+      rgba(217,189,126,0.14) 50%,
+      rgba(201,162,75,0.05) 65%,
+      transparent 100%
+    );
+    animation: dh-sweep 16s linear infinite;
+  }
+  @keyframes dh-sweep {
+    0%   { transform: translateY(-180px); }
+    100% { transform: translateY(120vh); }
+  }
+  .digital-hero-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background-image: radial-gradient(circle, rgba(201,162,75,0.28) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.40) 55%, transparent 85%);
+    mask-image: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.40) 55%, transparent 85%);
+    animation: dh-grid-pulse 6s ease-in-out infinite;
+  }
+  @keyframes dh-grid-pulse {
+    0%, 100% { opacity: 0.35; }
+    50%      { opacity: 0.70; }
+  }
+  .digital-hero-canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+  }
   .seal { width: 74px; height: 74px; border-radius: 50%; border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
   .seal .q { font-family: 'EB Garamond', serif; font-size: 42px; color: var(--gold); line-height: 1; }
   .authmark { font-family: 'EB Garamond', serif; font-size: 30px; letter-spacing: 0.04em; color: var(--parchment); font-weight: 500; }
@@ -137,6 +207,9 @@
 
   <!-- ===== The threshold (sign in / create account) ===== -->
   <div id="auth" class="authwrap" style="display:none">
+    <div class="digital-hero-overlay" aria-hidden="true"></div>
+    <div class="digital-hero-grid" aria-hidden="true"></div>
+    <canvas class="digital-hero-canvas" data-digital-hero aria-hidden="true"></canvas>
     <div class="seal"><span class="q">Q</span></div>
     <div class="authmark">Socrates<span>Q</span></div>
     <div class="thresh">What would Socrates say?</div>
@@ -597,6 +670,76 @@ renewBtn.addEventListener('click', () => {
 });
 inputEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
 inputEl.addEventListener('input', () => { inputEl.style.height = 'auto'; inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px'; });
+
+/* ---------- Digital hero — particle network on the threshold ---------- */
+document.querySelectorAll('[data-digital-hero]').forEach(function(canvas) {
+  var hero = canvas.closest('.authwrap');
+  if (!hero) return;
+  var ctx = canvas.getContext('2d');
+  var W = 0, H = 0, raf = null;
+  var PARTICLE_COUNT = 52;
+  var CONNECT_DIST = 120;
+  var R = 201, G = 162, B = 75; /* --gold: #c9a24b */
+
+  function resize() {
+    W = canvas.width = hero.offsetWidth  || 800;
+    H = canvas.height = hero.offsetHeight || 600;
+  }
+  resize();
+
+  var ro = window.ResizeObserver ? new ResizeObserver(resize) : null;
+  if (ro) ro.observe(hero);
+  else window.addEventListener('resize', resize);
+
+  var particles = [];
+  for (var i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.26,
+      vy: (Math.random() - 0.5) * 0.20,
+      r: Math.random() * 1.4 + 0.5
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0)  p.x = W;
+      if (p.x > W)  p.x = 0;
+      if (p.y < 0)  p.y = H;
+      if (p.y > H)  p.y = 0;
+    }
+    for (var i = 0; i < particles.length; i++) {
+      var a = particles[i];
+      for (var j = i + 1; j < particles.length; j++) {
+        var b = particles[j];
+        var dx = a.x - b.x, dy = a.y - b.y;
+        var d = Math.sqrt(dx*dx + dy*dy);
+        if (d < CONNECT_DIST) {
+          var alpha = (1 - d / CONNECT_DIST) * 0.32;
+          ctx.strokeStyle = 'rgba(' + R + ',' + G + ',' + B + ',' + alpha + ')';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      ctx.fillStyle = 'rgba(' + R + ',' + G + ',' + B + ',0.68)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    raf = requestAnimationFrame(draw);
+  }
+  draw();
+});
 </script>
 </body>
 </html>
